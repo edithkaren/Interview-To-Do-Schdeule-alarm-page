@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Interview To‑Do Alarm — Rudraksh</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --surface: #12172a;
+      --muted: #7e8aa0;
+      --text: #e9eef8;
+      --accent: #6ee7ff;
+      --accent-2: #9b8cff;
+      --danger: #ff6b6b;
+      --success: #44d19f;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font: 16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+      color: var(--text);
+      background: radial-gradient(1200px 700px at 10% -10%, #1b2242, transparent 60%),
+                  radial-gradient(900px 600px at 110% 10%, #0e3250, transparent 60%),
+                  var(--bg);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      min-height: 100vh;
+    }
+    header {
+      padding: 22px clamp(16px, 4vw, 36px);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .title {
+      font-weight: 800; letter-spacing: .4px; font-size: clamp(18px, 2.2vw, 28px);
+      display: flex; gap: 14px; align-items: center;
+    }
+    .title .badge { 
+      font-size: .75rem; padding: 4px 10px; border-radius: 999px; 
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #02121f; font-weight: 700; box-shadow: var(--shadow);
+    }
+    .controls { display:flex; align-items:center; gap:10px; }
+    button, .btn {
+      border: none; cursor: pointer; color: #07111f; font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      padding: 10px 14px; border-radius: 12px; box-shadow: var(--shadow);
+      transition: transform .08s ease, filter .2s ease;
+    }
+    button:hover { filter: brightness(1.08); }
+    button:active { transform: translateY(1px) scale(.99); }
+    .ghost {
+      background: #1b2442; color: var(--text); border: 1px solid #2a335a;
+    }
+    main { padding: 0 clamp(16px, 4vw, 36px) 36px; }
+
+    .grid {
+      display: grid; gap: 18px; 
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+    }
+    .card {
+      grid-column: span 12;
+      background: linear-gradient(180deg, #12182e 0%, #0f1529 100%);
+      border: 1px solid #1f2a4d; border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: clamp(14px, 2vw, 22px);
+    }
+    @media (min-width: 980px) {
+      .card--left { grid-column: span 7; }
+      .card--right { grid-column: span 5; }
+    }
+
+    .row { display:flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    label { font-size: .85rem; color: var(--muted); }
+    input[type="text"] {
+      flex: 1 1 220px; min-width: 200px;
+      background: #0f1730; border: 1px solid #263158; color: var(--text);
+      padding: 10px 12px; border-radius: 12px; outline: none;
+    }
+    input[type="datetime-local"], input[type="date"], input[type="time"] {
+      background: #0f1730; border: 1px solid #263158; color: var(--text);
+      padding: 10px 12px; border-radius: 12px; outline: none;
+    }
+    select { 
+      background: #0f1730; border: 1px solid #263158; color: var(--text);
+      padding: 10px 12px; border-radius: 12px; outline: none;
+    }
+
+    .list { display: grid; gap: 12px; margin-top: 14px; }
+    .item {
+      display: grid; gap: 10px; grid-template-columns: 1fr auto; align-items: center;
+      background: #0f1530; border: 1px solid #222d55; border-radius: 14px; padding: 12px;
+    }
+    .item.done { opacity: .6; }
+    .meta { display:flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .when { font-size: .9rem; color: var(--muted); }
+    .tag { font-size: .75rem; padding: 3px 8px; border-radius: 999px; border:1px solid #2a3563; color: #a7b3ce; }
+
+    .actions { display:flex; gap: 8px; }
+    .danger { background: #2b1420; color:#ffd6dc; border: 1px solid #5a2536; }
+    .ok { background: #0f2b24; color:#c7ffef; border: 1px solid #1a5a49; }
+    .snooze { background:#1f2445; color:#cfe4ff; border:1px solid #2f3a72; }
+
+    .small { padding: 7px 10px; border-radius: 10px; font-size: .85rem; font-weight: 700; }
+
+    .muted { color: var(--muted); font-size: .92rem; }
+
+    .next-up {
+      display:flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 12px; border-radius: 12px; background: #0e1938; border: 1px dashed #2b3a73;
+    }
+    .next-up strong { font-weight: 800; }
+
+    footer { padding: 12px clamp(16px, 4vw, 36px) 28px; color: var(--muted); font-size: .85rem; }
+    a { color: var(--accent); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title">
+      <span>📅 Interview To‑Do Alarm</span>
+      <span class="badge">Local • Offline</span>
+    </div>
+    <div class="controls">
+      <button id="btnTest">Test Alarm</button>
+      <button id="btnClear" class="ghost" title="Remove completed & past tasks">Clear Done/Past</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="grid">
+      <section class="card card--left">
+        <h2 style="margin:0 0 8px 0">Your Tasks</h2>
+        <p class="muted" style="margin:0 0 12px 0">Add or edit your interviews for tomorrow. The alarm will ring at the set time (IST).
+        Notifications work if you keep this tab open and grant permission.</p>
+
+        <div class="row" style="margin-bottom:10px">
+          <input id="titleInput" type="text" placeholder="Task title (e.g., Quest Digiflex Interview)" />
+          <input id="timeInput" type="datetime-local" />
+          <select id="leadInput" title="How long before to remind?">
+            <option value="0">At time</option>
+            <option value="5">5 min early</option>
+            <option value="10" selected>10 min early</option>
+            <option value="15">15 min early</option>
+            <option value="30">30 min early</option>
+          </select>
+          <button id="addBtn">Add</button>
+        </div>
+
+        <div id="list" class="list" aria-live="polite"></div>
+      </section>
+
+      <aside class="card card--right">
+        <h3 style="margin:0 0 10px 0">Next up</h3>
+        <div id="nextUp" class="next-up">
+          <div>
+            <div class="muted">Waiting for tasks…</div>
+          </div>
+          <div><strong>—</strong></div>
+        </div>
+
+        <h3 style="margin:16px 0 8px 0">Tips</h3>
+        <ul class="muted" style="margin:0 0 10px 18px; padding:0; line-height:1.8">
+          <li>Keep the tab open for alarms to work.</li>
+          <li>Allow browser notifications when prompted.</li>
+          <li>Use <em>Snooze</em> for a quick 5/10/15 minute delay.</li>
+          <li>Tasks are saved to your browser (localStorage).</li>
+        </ul>
+      </aside>
+    </div>
+  </main>
+
+  <footer>
+    Built for <strong>Rudraksh</strong>. Timezone assumed: <strong>Asia/Kolkata (IST)</strong>.
+  </footer>
+
+  <script>
+    // --- Utilities ---
+    const IST_OFFSET_MIN = 5.5 * 60; // IST is UTC+5:30
+    const toIST = (d) => new Date(d.getTime() + (IST_OFFSET_MIN - d.getTimezoneOffset())*60000);
+    const fromISTLocal = (dIst) => new Date(dIst.getTime() - (IST_OFFSET_MIN - new Date().getTimezoneOffset())*60000);
+
+    const $ = (sel) => document.querySelector(sel);
+    const listEl = $('#list');
+    const titleInput = $('#titleInput');
+    const timeInput = $('#timeInput');
+    const leadInput = $('#leadInput');
+    const nextUpEl = $('#nextUp');
+
+    const storeKey = 'todo-alarm-rudraksh-v1';
+
+    const nowLocal = () => new Date();
+    const pad = (n) => String(n).padStart(2,'0');
+
+    const fmtDateTime = (d) => {
+      // Show as DD MMM, HH:MM IST
+      const day = pad(d.getDate());
+      const month = d.toLocaleString('en-GB', { month: 'short' });
+      const hh = pad(d.getHours());
+      const mm = pad(d.getMinutes());
+      const dow = d.toLocaleString('en-GB', { weekday: 'short' });
+      return `${dow}, ${day} ${month} ${hh}:${mm} IST`;
+    };
+
+    // --- Audio (no external file): simple chime via WebAudio ---
+    let audioCtx;
+    function playChime(seconds = 2.2) {
+      try {
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        const ctx = audioCtx;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        const now = ctx.currentTime;
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.exponentialRampToValueAtTime(440, now + seconds);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.3, now + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + seconds);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start();
+        osc.stop(now + seconds);
+      } catch(e) { console.warn('Audio error', e); }
+    }
+
+    // --- Notifications ---
+    async function ensureNotifyPermission() {
+      if (!('Notification' in window)) return false;
+      if (Notification.permission === 'granted') return true;
+      if (Notification.permission !== 'denied') {
+        try { const p = await Notification.requestPermission(); return p === 'granted'; } catch { return false; }
+      }
+      return false;
+    }
+    function showNotification(title, body) {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try { new Notification(title, { body }); } catch {}
+      }
+      // Also flash title for visibility
+      const original = document.title;
+      let i = 0; const timer = setInterval(() => {
+        document.title = (document.title === '⏰ ALARM!') ? original : '⏰ ALARM!';
+        if (++i > 12) { clearInterval(timer); document.title = original; }
+      }, 500);
+    }
+
+    // --- State ---
+    let tasks = load();
+    function load() { try { return JSON.parse(localStorage.getItem(storeKey)) || []; } catch { return []; } }
+    function save() { localStorage.setItem(storeKey, JSON.stringify(tasks)); }
+
+    function addTask(title, whenISO, leadMin) {
+      if (!title) return;
+      if (!whenISO) return;
+      const id = crypto.randomUUID();
+      tasks.push({ id, title, whenISO, leadMin: Number(leadMin)||0, done:false, fired:false });
+      tasks.sort((a,b)=> new Date(a.whenISO) - new Date(b.whenISO));
+      save();
+      render();
+    }
+
+    function removeTask(id) { tasks = tasks.filter(t => t.id !== id); save(); render(); }
+    function toggleDone(id) { const t = tasks.find(x=>x.id===id); if (t) { t.done = !t.done; save(); render(); } }
+    function snooze(id, minutes) {
+      const t = tasks.find(x=>x.id===id); if (!t) return;
+      const base = Math.max(Date.now(), new Date(t.whenISO).getTime());
+      const next = new Date(base + minutes*60*1000);
+      t.whenISO = next.toISOString(); t.fired = false; t.done = false; save(); render();
+    }
+
+    function clearDoneAndPast() {
+      const now = Date.now();
+      tasks = tasks.filter(t => !(t.done || new Date(t.whenISO).getTime() < now - 5*60*1000));
+      save(); render();
+    }
+
+    function render() {
+      // List
+      listEl.innerHTML = '';
+      tasks.forEach(t => {
+        const when = new Date(t.whenISO);
+        const whenIST = toIST(when);
+        const li = document.createElement('div');
+        li.className = 'item' + (t.done ? ' done' : '');
+        li.innerHTML = `
+          <div>
+            <div style="font-weight:800; font-size:1rem;">${t.title}</div>
+            <div class="meta">
+              <span class="when">${fmtDateTime(whenIST)}</span>
+              <span class="tag">Reminder: ${t.leadMin} min early</span>
+              ${t.fired ? '<span class="tag" style="border-color:#4f5; color:#9f9">Rang</span>' : ''}
+            </div>
+          </div>
+          <div class="actions">
+            <button class="small ok" data-act="done" data-id="${t.id}">${t.done?'Undo':'Done'}</button>
+            <button class="small snooze" data-act="snooze5" data-id="${t.id}">Snooze 5m</button>
+            <button class="small snooze" data-act="snooze10" data-id="${t.id}">10m</button>
+            <button class="small snooze" data-act="snooze15" data-id="${t.id}">15m</button>
+            <button class="small danger" data-act="del" data-id="${t.id}">Delete</button>
+          </div>
+        `;
+        listEl.appendChild(li);
+      });
+
+      // Next Up
+      const upcoming = tasks.filter(t=>!t.done).sort((a,b)=>new Date(a.whenISO)-new Date(b.whenISO))[0];
+      if (upcoming) {
+        const whenIST = toIST(new Date(upcoming.whenISO));
+        nextUpEl.innerHTML = `
+          <div>
+            <div><strong>${upcoming.title}</strong></div>
+            <div class="muted">${fmtDateTime(whenIST)} • remind ${upcoming.leadMin} min early</div>
+          </div>
+          <div>⏱️</div>
+        `;
+      } else {
+        nextUpEl.innerHTML = `
+          <div><div class="muted">No upcoming tasks</div></div>
+          <div>—</div>
+        `;
+      }
+    }
+
+    // --- Alarm loop ---
+    async function alarmLoop() {
+      const ok = await ensureNotifyPermission();
+      const now = Date.now();
+      tasks.forEach(t => {
+        const target = new Date(t.whenISO).getTime() - (Number(t.leadMin)||0)*60*1000;
+        if (!t.fired && !t.done && now >= target) {
+          t.fired = true; save();
+          playChime(); showNotification('Interview Reminder', `${t.title} — ${t.leadMin? t.leadMin+ ' min early' : 'Time now'}`);
+          alert(`⏰ Interview Reminder\n\n${t.title}\n\n${t.leadMin ? t.leadMin + ' min early' : 'Happening now'}\n`);
+          render();
+        }
+      });
+    }
+    setInterval(alarmLoop, 1000 * 20); // check every 20s
+
+    // --- Wire up ---
+    $('#addBtn').addEventListener('click', () => {
+      addTask(titleInput.value.trim(), timeInput.value ? new Date(timeInput.value).toISOString() : '', leadInput.value);
+      titleInput.value='';
+    });
+
+    listEl.addEventListener('click', (e)=>{
+      const btn = e.target.closest('button'); if(!btn) return;
+      const id = btn.getAttribute('data-id');
+      const act = btn.getAttribute('data-act');
+      if (act==='del') removeTask(id);
+      if (act==='done') toggleDone(id);
+      if (act==='snooze5') snooze(id, 5);
+      if (act==='snooze10') snooze(id, 10);
+      if (act==='snooze15') snooze(id, 15);
+    });
+
+    $('#btnClear').addEventListener('click', clearDoneAndPast);
+    $('#btnTest').addEventListener('click', ()=>{ playChime(); showNotification('Test Alarm', 'Notifications are working'); });
+
+    // --- Prefill tomorrow with given companies ---
+    function prefillIfEmpty() {
+      if (tasks.length) { render(); return; }
+      const companies = [
+        'Quest Digiflex',
+        'American Chase',
+        'Integra Mania',
+        'Moreyeahs'
+      ];
+      const now = nowLocal();
+      const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate()+1, 0, 0, 0);
+      const baseHours = [10, 12, 14, 16]; // default slots IST
+      companies.forEach((name, i) => {
+        const ist = new Date(tomorrow.getTime()); ist.setHours(baseHours[i]||10, 0, 0, 0);
+        // Convert IST to local system time for the Date input and scheduling
+        const local = fromISTLocal(ist);
+        addTask(`${name} — Interview`, local.toISOString(), 10);
+      });
+    }
+
+    // Initialize datetime-local default to tomorrow 10:00 IST translated to local
+    (function initInputs(){
+      const now = nowLocal();
+      const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate()+1, 0, 0, 0);
+      const istDefault = new Date(tomorrow.getTime()); istDefault.setHours(10,0,0,0);
+      const localDefault = fromISTLocal(istDefault);
+      timeInput.value = localDefault.toISOString().slice(0,16);
+    })();
+
+    prefillIfEmpty();
+    render();
+  </script>
+</body>
+</html>
